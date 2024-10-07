@@ -13,7 +13,10 @@ urlpatterns = [
     path('customers/', views.customers, name='customers'),
     path('home', views.services_list, name='services_list'),   
     path('services/delete/<int:id>/', views.delete_service, name='delete_service'),
-   
+    path('calendar/', views.calendar_view, name='calendar'),  
+    path('fetch-services/', views.fetch_services, name='fetch_services'),
+    path('fetch-appointments/', views.fetch_appointments, name='fetch_appointments'),
+    path('create-appointment/', views.create_appointment, name='create-appointment'),  # Booking creation view
  
 ]
 

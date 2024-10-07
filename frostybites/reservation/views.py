@@ -78,3 +78,44 @@ def delete_service(request, id):
         service.delete()
         return redirect('/services/')  # Redirect to the services list page
     return render(request, 'admin/delete_service.html', {'service': service})
+
+def calendar_view(request):
+    services = Services.objects.all()  # Fetch all services
+    return render(request, 'userside/calendar.html', {'services': services})
+
+def fetch_services(request):
+    services = Services.objects.all().values('id', 'service_name', 'price')
+    return JsonResponse(list(services), safe=False)
+
+def fetch_appointments(request):
+    Appointments = Appointment.objects.all().values('id', 'service_id','date', 'time', 'user__username')
+    events = []
+    for Appointment in Appointments:
+        events.append({
+            'title': f"{Appointment['user__username']} booked {Appointment['service_id']}",
+            'start': f"{Appointment['date']}T{Appointment['time']}",  # FullCalendar requires a specific format
+        })
+    return JsonResponse(events, safe=False)
+
+@login_required  # Ensure that the user is authenticated
+def create_appointment(request):
+    if request.method == 'POST':
+        service_id = request.POST.get('service')
+        date = request.POST.get('date')
+        time = request.POST.get('time')
+        user = request.user
+
+        try:
+            # Create a new appointment entry
+            service = Services.objects.get(id=service_id)
+            appointment = Appointment.objects.create(service=service, date=date, time=time, user=user)  # Updated model name
+            appointment.save()
+
+            # Redirect to main page after successful booking
+            return redirect('')  # Replace 'home' with the name of your main page URL pattern
+        except Services.DoesNotExist:
+            return JsonResponse({'status': 'error', 'message': 'Service does not exist.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)

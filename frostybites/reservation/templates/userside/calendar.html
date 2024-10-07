@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.css' rel='stylesheet' />
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js'></script>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/fullcalendar/3.10.2/fullcalendar.min.js'></script>
+    <title>Appointment Calendar</title>
+    <style>
+        /* General Body Styles */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f7fa;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Calendar Container */
+#calendar {
+    max-width: 900px;
+    margin: 0 auto; /* Center the calendar */
+    background: white; /* White background for calendar */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    padding: 20px;
+}
+
+/* Header Styles */
+.fc-toolbar {
+    background-color: #4a90e2; /* Blue background for the toolbar */
+    color: white; /* White text */
+    border-radius: 8px; /* Rounded corners */
+    padding: 10px;
+}
+
+/* Day Styles */
+.fc-day {
+    border: 1px solid #e1e1e1; /* Light border for each day */
+}
+
+.fc-day:hover {
+    background-color: #e9f6ff; /* Light blue on hover */
+}
+
+/* Event Styles */
+.fc-event {
+    background-color: #4caf50; /* Green background for events */
+    color: white; /* White text */
+    border-radius: 5px; /* Rounded corners */
+    padding: 5px;
+    transition: background-color 0.3s; /* Smooth transition */
+}
+
+.fc-event:hover {
+    background-color: #388e3c; /* Darker green on hover */
+}
+
+/* Modal Styles */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1000; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
+}
+
+.modal-content {
+    background-color: #fff; /* White background for modal */
+    margin: 15% auto; /* 15% from the top and centered */
+    padding: 20px;
+    border-radius: 8px; /* Rounded corners */
+    width: 80%; /* Could be more or less, depending on screen size */
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2); /* Shadow for modal */
+}
+
+/* Close Button */
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Alert Messages */
+.alert {
+    display: none;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+h1{
+    text-align: center;
+    
+}
+
+        /* Basic modal styles */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1000; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            background-color: rgba(0, 0, 0, 0.5); /* Black w/ opacity */
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+            position: relative; /* Required for proper positioning */
+            z-index: 1001; /* Sit on top of the overlay */
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        /* Success/Error Message Styles */
+        .alert {
+            display: none;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .alert-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .alert-error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Book a Service</h1>
+
+    <!-- Modal for appointment form -->
+    <div id="appointmentModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Book a Service</h2>
+            <form id="appointmentForm" method="POST" action="create-appointment/">
+                {% csrf_token %}
+                <label for="service">Select Service:</label>
+                <select name="service" id="service" required>
+                    {% for service in services %}
+                        <option value="{{ service.id }}">{{ service.service_name }}</option>
+                    {% endfor %}
+                </select>
+                
+                <label for="date">Selected Date:</label>
+                <input type="text" name="date" id="selectedDate" readonly required>
+                
+                <label for="time">Select Time:</label>
+                <input type="time" name="time" id="time" required>
+                
+                <button type="submit">Book Now</button>
+            </form>
+            <div id="alert" class="alert"></div>
+        </div>
+    </div>
+    
+    <div id='calendar'></div>
+    
+    <script>
+    $(document).ready(function() {
+    $('#calendar').fullCalendar({
+        events: '/appointments/fetch-appointments/',
+        selectable: true,
+        select: function(start, end) {
+            $('#selectedDate').val(start.format('YYYY-MM-DD'));
+            $('#appointmentModal').css("display", "block");
+            $('#calendar').fullCalendar('unselect');
+        }
+    });
+
+    // Close the modal
+    $('.close').click(function() {
+        $('#appointmentModal').css("display", "none");
+        $('#alert').hide(); // Hide alert on close
+    });
+
+    // Handle form submission
+    $('#appointmentForm').submit(function(event) {
+        console.log('Form submission event triggered'); // Debugging log
+        event.preventDefault(); // Prevent default form submission
+
+        console.log('Submitting appointment form...');
+        console.log($(this).serialize()); // Log the serialized form data
+        
+        $.ajax({
+            url: $(this).attr('action'), // Ensure this is correct
+            type: 'POST',
+            data: $(this).serialize(),
+            success: function(response) {
+                console.log('Success response:', response);
+                $('#alert').removeClass('alert-error').addClass('alert-success').text(response.message).show();
+                $('#appointmentModal').css("display", "none"); // Close modal
+                $('#calendar').fullCalendar('refetchEvents'); // Refresh calendar events
+            },
+            error: function(xhr) {
+                console.error('Error response:', xhr);
+                $('#alert').removeClass('alert-success').addClass('alert-error').text(xhr.responseJSON.message).show();
+            }
+        });
+    });
+});
+
+
+    </script>
+    
+</body>
+</html>
